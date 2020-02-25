@@ -19,7 +19,7 @@ covid19 <- covid19 %>%
         # Tidy step #1; treat date and time as a value and not a variable
         # First, specify the date columns using an inelegant method 
         # Use gather() to pivot the columns into two columns
-        gather(names(covid19)[5:ncol(covid19)], key = "date_time", value = "cumsum") %>% 
+        gather(names(covid19)[5:ncol(covid19)], key = "date_time", value = "total_cases") %>% 
         
         # If nothing happened (NA) on a particular day, remove the record
         filter(complete.cases(.)) %>% 
@@ -27,14 +27,29 @@ covid19 <- covid19 %>%
         # Convert the date_time field from a string to a POSIX date
         mutate(date_time = mdy(date_time, tz = "America/New_York"))
 
-# Derive the new daily cases from the cumulative sum data presented
+# Derive the new daily cases from the cumulative sum data presented this will get more specific 
+# data for Provinces and makes it easy to drill down into cases in China
 
 covid19_newcases <- covid19 %>% 
         
-        # Group by Province/State becasue it's easy 
+        # Group by Province/State because it's easy 
         group_by(`Province/State`) %>% 
         
         # Subtract the previous entry for the present entry which results in the new cases between
         # the two time periods
-        mutate(new_cases = cumsum - lag(cumsum, default = first(cumsum), order_by = date_time)) 
+        mutate(new_cases = total_cases - lag(total_cases, default = first(total_cases), order_by = date_time)) 
 
+# To look at data just by country, create a new tibble
+
+covid19_country_newcases <- covid19 %>% 
+        
+        # Create a grouping to summarize results
+        group_by(`Country/Region`, date_time) %>% 
+        
+        #Summarize them
+        summarise(total_country_cases = sum(total_cases)) %>% 
+        # 
+        # Subtract the previous entry for the present entry which results in the new cases between
+        # the two time periods
+        mutate(new_cases = total_country_cases - lag(total_country_cases, default = first(total_country_cases), 
+                                                     order_by = date_time)) 
